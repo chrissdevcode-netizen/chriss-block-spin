@@ -53,7 +53,7 @@ local Config = {
     -- Cheats
     SpeedValue = 16, 
     SpeedEnabled = false, 
-    InfJump = false, 
+
     SpinBot = false,      
     SpinSpeed = 30,       
     HideName = false,     
@@ -209,7 +209,7 @@ RunService.RenderStepped:Connect(function()
     local bcG = math.floor(80 + math.sin(t * 0.5) * 20)
     local bcHex = string.format("#%02X%02XFF", bcR, bcG)
 
-    Title.Text = string.format('<b><font color="%s">BULLET CONFLICT</font> <font color="%s">PREMIUM</font></b>', bcHex, goldHex)
+    Title.Text = string.format('<b><font color="%s">BLOCK SPIN</font> <font color="%s">PREMIUN</font></b>', bcHex, goldHex)
 end)
 
 -- CLOSE BOTON
@@ -847,8 +847,8 @@ NewsBody.Parent = NewsCard
 AddToggle(TabCheats, "Speed Hack", "SpeedEnabled", Theme.Main)
 AddSlider(TabCheats, "Speed Power", 16, 300, 16, "SpeedValue", Theme.Main)
 AddToggle(TabCheats, "Infinity Jump", "InfJump", Theme.Main)
-AddToggle(TabCheats, "Hide Name 👤", "HideName", Theme.Main)
-AddToggle(TabCheats, "Spin Bot 🌀", "SpinBot", Theme.Main)
+AddToggle(TabCheats, "Hide Name ", "HideName", Theme.Main)
+AddToggle(TabCheats, "Spin Bot ", "SpinBot", Theme.Main)
 AddSlider(TabCheats, "Spin Speed", 10, 150, 30, "SpinSpeed", Theme.Main)
 
 AddToggle(TabCombat, "Aimbot", "AimbotEnabled", Theme.Combat)
@@ -1331,8 +1331,8 @@ RunService.Heartbeat:Connect(function()
     if Character and Humanoid and RootPart and Config.SpeedEnabled then
         local MoveDirection = Humanoid.MoveDirection
         if MoveDirection.Magnitude > 0 then
-            local speed = math.clamp(Config.SpeedValue, 60, 100)
-            RootPart.CFrame = RootPart.CFrame + (MoveDirection * (speed / 100))
+            local speed = math.clamp(Config.SpeedValue, 60, 80)
+            RootPart.CFrame = RootPart.CFrame + (MoveDirection * (speed / 80))
         end
     end
 end)
@@ -1340,12 +1340,7 @@ end)
 
 
 
--- LOGICA INF JUMP
-UserInputService.JumpRequest:Connect(function()
-    if Config.InfJump and Character and Humanoid then
-        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
+
 
 -- LOGICA SPIN BOT Y HIDE NAME
 RunService.RenderStepped:Connect(function()
