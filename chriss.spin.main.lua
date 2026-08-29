@@ -994,8 +994,6 @@ BtnRejoin.MouseButton1Click:Connect(function()
     end
 end)
 
-
-
 --  SISTEMA ESP
 local WeaponColors = {
     
@@ -1070,17 +1068,29 @@ local WeaponColors = {
     ["Fire Cracker"] = Color3.fromRGB(150, 150, 150),
     ["Snowball"] = Color3.fromRGB(150, 150, 150),
     ["FishingRodRegular"] = Color3.fromRGB(150, 150, 150)
-    }
+}
     
-
+-- FUNCIÓN BLINDADA (Filtra IDs numéricos y basura)
 local function GetPlayerTool(player)
     if player.Character then
-        local tool = player.Character:FindFirstChildOfClass("Tool")
-        if tool then return tool end
+        for _, tool in pairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                local wName = tool.Name
+                if WeaponColors[wName] and wName ~= "Fists" and not tonumber(wName) then
+                    return wName
+                end
+            end
+        end
     end
     if player:FindFirstChild("Backpack") then
-        local tool = player.Backpack:FindFirstChildOfClass("Tool")
-        if tool then return tool end
+        for _, tool in pairs(player.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local wName = tool.Name
+                if WeaponColors[wName] and wName ~= "Fists" and not tonumber(wName) then
+                    return wName
+                end
+            end
+        end
     end
     return nil
 end
@@ -1225,7 +1235,7 @@ RunService.RenderStepped:Connect(function()
             cache.Highlight.Adornee = character
             cache.Highlight.Enabled = Config.ESPBox
 
-            --  ESP BOX R
+            --  ESP BOX 
             if Config.ESPBox then
                 cache.Box.Size = UDim2.new(0, boxWidth, 0, boxHeight)
                 cache.Box.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, topPos.Y)
@@ -1256,13 +1266,12 @@ RunService.RenderStepped:Connect(function()
                 cache.DistText.Visible = false
             end
 
-            -- ESP ARMAS
+            -- ESP ARMAS (CORREGIDO PARA FILTRAR BASURA)
             if Config.ESPGun then
-                local tool = GetPlayerTool(player)
-                if tool then
-                    local wName = tool.Name
+                local wName = GetPlayerTool(player)
+                if wName then
                     cache.GunText.Text = Config.ESPGunDist and string.format("%s [%d studs]", wName, math.floor(distance)) or wName
-                    cache.GunText.TextColor3 = WeaponColors[wName] or Color3.fromRGB(255, 255, 255)
+                    cache.GunText.TextColor3 = WeaponColors[wName]
                     cache.GunText.Size = UDim2.new(0, boxWidth, 0, 15)
                     cache.GunText.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, yOffset)
                     cache.GunText.Visible = true
@@ -1290,7 +1299,7 @@ RunService.RenderStepped:Connect(function()
                 cache.HealthBg.Visible = false
             end
 
-            -- TRACES (
+            -- TRACES
             if Config.Traces then
                 local targetPos = Vector2.new(rootPos.X, bottomPos.Y)
                 local dist = (targetPos - screenBottomCenter).Magnitude
@@ -1313,7 +1322,10 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-    
+
+
+
+                    
     
         
     
