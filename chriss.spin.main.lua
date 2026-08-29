@@ -998,57 +998,80 @@ end)
 
 --  SISTEMA ESP
 local WeaponColors = {
-    -- DORADO 
-    ["AK47"] = Color3.fromRGB(255, 215, 0),
-    ["AK47-Cosmetic"] = Color3.fromRGB(255, 215, 0),
-    ["AK47-لا تستخدم"] = Color3.fromRGB(255, 215, 0),
+    
+    --  ROJO FUERTE SANGRE
+    ["M249"] = Color3.fromRGB(139, 0, 0),
+    ["Anaconda"] = Color3.fromRGB(139, 0, 0),
+
+    --  DORADO
+    ["AUG"] = Color3.fromRGB(255, 215, 0),
+    ["AWP"] = Color3.fromRGB(255, 215, 0),
+    ["P90"] = Color3.fromRGB(255, 215, 0),
     ["M16"] = Color3.fromRGB(255, 215, 0),
+    ["AK47"] = Color3.fromRGB(255, 215, 0),
     ["MP5"] = Color3.fromRGB(255, 215, 0),
+    ["Bizon"] = Color3.fromRGB(255, 215, 0),
     ["Remington"] = Color3.fromRGB(255, 215, 0),
     ["RPG"] = Color3.fromRGB(255, 215, 0),
-    ["RPGPermanent"] = Color3.fromRGB(255, 215, 0),
-    ["RPG-ریموٹ فونکشن اصلی"] = Color3.fromRGB(255, 215, 0),
     ["Tactical Axe"] = Color3.fromRGB(255, 215, 0),
-    ["RightGrip"] = Color3.fromRGB(255, 215, 0),
+    ["Tactical Knife"] = Color3.fromRGB(255, 215, 0),
+    ["Tactical Shovel"] = Color3.fromRGB(255, 215, 0),
+    ["Marlin"] = Color3.fromRGB(255, 215, 0), -- El de los 100k 🤑
 
-    -- ROJO
-    ["Anaconda"] = Color3.fromRGB(200, 0, 0),
-    ["M249"] = Color3.fromRGB(255, 0, 0),
+    --  MORADO
+    ["M24"] = Color3.fromRGB(160, 32, 240),
+    ["Skorpion"] = Color3.fromRGB(160, 32, 240),
+    ["Double Barrel"] = Color3.fromRGB(160, 32, 240),
+    ["Machette"] = Color3.fromRGB(160, 32, 240),
+    ["Combat Axe"] = Color3.fromRGB(160, 32, 240),
+    ["Sledge Hammer"] = Color3.fromRGB(160, 32, 240),
+    ["Sledgehammer"] = Color3.fromRGB(160, 32, 240),
+    ["Barbed Baseball Bat"] = Color3.fromRGB(160, 32, 240),
+    ["Grenade"] = Color3.fromRGB(160, 32, 240),
+    ["Molotov"] = Color3.fromRGB(160, 32, 240),
+    ["Firework Launcher"] = Color3.fromRGB(160, 32, 240),
+    ["Tuna"] = Color3.fromRGB(160, 32, 240),
+
+    --  AZUL FUERTE
+    ["Glock"] = Color3.fromRGB(0, 70, 255),
+    ["P226"] = Color3.fromRGB(0, 70, 255),
+    ["Uzi"] = Color3.fromRGB(0, 70, 255),
+    ["Sawnoff"] = Color3.fromRGB(0, 70, 255),
+
+    --  AZUL (Normal / Claro)
+    ["Hunting Rifle"] = Color3.fromRGB(0, 150, 255),
+    ["Switchblade"] = Color3.fromRGB(0, 150, 255),
+    ["Crowbar"] = Color3.fromRGB(0, 150, 255),
+    ["Metal Baseball Bat"] = Color3.fromRGB(0, 150, 255),
+    ["Cinder Block"] = Color3.fromRGB(0, 150, 255),
+    ["Frying Pan"] = Color3.fromRGB(0, 150, 255),
+    ["Dumbbell Plate"] = Color3.fromRGB(0, 150, 255),
+    ["Brainrot Slap"] = Color3.fromRGB(0, 150, 255),
+    ["FishingRodUltimate"] = Color3.fromRGB(0, 150, 255),
+    ["FishingRodPro"] = Color3.fromRGB(0, 150, 255),
+    ["FishingRodAdvanced"] = Color3.fromRGB(0, 150, 255),
 
     --  VERDE
     ["G3"] = Color3.fromRGB(46, 204, 113),
+    ["Baseball Bat"] = Color3.fromRGB(50, 255, 100),
+    ["Nailed Wooden Board"] = Color3.fromRGB(50, 255, 100),
+    ["Chair Leg"] = Color3.fromRGB(50, 255, 100),
+    ["Brick"] = Color3.fromRGB(50, 255, 100),
+    ["Shovel"] = Color3.fromRGB(50, 255, 100),
+    ["Rusty Shovel"] = Color3.fromRGB(50, 255, 100),
+    ["Rolling Pin"] = Color3.fromRGB(50, 255, 100),
+    ["Pool Cue"] = Color3.fromRGB(50, 255, 100),
+    ["Bowling Pin"] = Color3.fromRGB(50, 255, 100),
 
-    -- AZUL CLARO 
-    ["Glock"] = Color3.fromRGB(52, 152, 219),
-    ["P226"] = Color3.fromRGB(52, 152, 219),
-
-    --  AZUL FUERTE 
-    ["Uzi"] = Color3.fromRGB(0, 70, 255),
-    ["LongMagGlock"] = Color3.fromRGB(0, 70, 255),
-
-    -- PÚRPURA
-    ["Draco"] = Color3.fromRGB(160, 32, 240),
-    ["Double Barrel"] = Color3.fromRGB(160, 32, 240),
-    ["EnergyShot"] = Color3.fromRGB(160, 32, 240),
-    ["Barbed Baseball Bat"] = Color3.fromRGB(160, 32, 240),
-    ["Combat Axe"] = Color3.fromRGB(160, 32, 240),
-    ["sledgehammer"] = Color3.fromRGB(160, 32, 240),
-
-    --  TRAPEADORES ESPECIALES
-    ["Mop"] = Color3.fromRGB(128, 128, 128),
-    ["SilverMop"] = Color3.fromRGB(192, 192, 192),
-    ["GoldMop"] = Color3.fromRGB(255, 215, 0),
-    ["DiamondMop"] = Color3.fromRGB(0, 235, 255),
-    ["SapphireMop"] = Color3.fromRGB(15, 82, 186),
-    ["EmeraldMop"] = Color3.fromRGB(80, 220, 100),
-
-    --  HERRAMIENTAS DE PESCA (VERDE BAJO)
-    ["FishingRod"] = Color3.fromRGB(144, 238, 144), 
-    ["FishingRodPro"] = Color3.fromRGB(144, 238, 144),
-    ["FishingRodUltimate"] = Color3.fromRGB(144, 238, 144), 
-    ["WormtecRegular"] = Color3.fromRGB(144, 238, 144), 
-    ["WormtecUltimate"] = Color3.fromRGB(144, 238, 144) 
+    --  GRIS
+    ["Taser"] = Color3.fromRGB(150, 150, 150),
+    ["Shank"] = Color3.fromRGB(150, 150, 150),
+    ["Metal Pipe"] = Color3.fromRGB(150, 150, 150),
+    ["Fire Cracker"] = Color3.fromRGB(150, 150, 150),
+    ["Snowball"] = Color3.fromRGB(150, 150, 150),
+    ["FishingRodRegular"] = Color3.fromRGB(150, 150, 150)
     }
+    
 
 local function GetPlayerTool(player)
     if player.Character then
