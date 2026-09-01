@@ -1,11 +1,18 @@
-
 -- BLOCK SPIN PREMIUM
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+-- ⚙️ NUEVOS SERVICIOS AÑADIDOS
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
+
 
 local Character = LocalPlayer.Character
 if not Character then
@@ -48,12 +55,10 @@ fovStroke.Parent = fovFrame
 fovStroke.Thickness = 1.5
 fovStroke.Color = Color3.fromRGB(255, 255, 255)
 
--- VARIABLES Y CONFIGURACIONES
 local Config = {
     -- Cheats
     SpeedValue = 16, 
     SpeedEnabled = false, 
-
     SpinBot = false,      
     SpinSpeed = 30,       
     HideName = false,     
@@ -65,6 +70,7 @@ local Config = {
     FOVRadius = 100,
     WallCheck = true,
     TargetPart = "HumanoidRootPart",
+    NoRecoil = false, --  NUEVO
     
     -- Visuals
     Fullbright = false,
@@ -75,10 +81,18 @@ local Config = {
     Traces = false,
     ESPGun = false, 
     ESPGunDist = false,
+    DroppedItemESP = false, --  NUEVO
+    
+    -- Supervivencia y Automatización 
+    AutoBlood = false,
+    AutoSkipCrate = false,
+    AutoMinigame = false,
+    AutoPickup = false,
     
     -- Misc
     LockUI = false
 }
+
 
 -- TEMAS
 local Theme = {
@@ -843,19 +857,25 @@ NewsBody.TextYAlignment = Enum.TextYAlignment.Top
 NewsBody.BackgroundTransparency = 1
 NewsBody.Parent = NewsCard
 
--- FUNCIONES CHEATS
+-- FUNCIONES CHEATS & AUTOMATIZACIÓN
 AddToggle(TabCheats, "Speed Hack", "SpeedEnabled", Theme.Main)
 AddSlider(TabCheats, "Speed Power", 16, 300, 16, "SpeedValue", Theme.Main)
 AddToggle(TabCheats, "Infinity Jump", "InfJump", Theme.Main)
-AddToggle(TabCheats, "Hide Name ", "HideName", Theme.Main)
+AddToggle(TabCheats, "Hide Name (CS / EXPLOITS)", "HideName", Theme.Main)
 AddToggle(TabCheats, "Spin Bot ", "SpinBot", Theme.Main)
 AddSlider(TabCheats, "Spin Speed", 10, 150, 30, "SpinSpeed", Theme.Main)
+--  BOTONES DE  AUTOMATIZACIÓN
+AddToggle(TabCheats, "Auto Blood Bag (<70 HP)", "AutoBlood", Theme.Main)
+AddToggle(TabCheats, "Auto Skip Crate / Ammo", "AutoSkipCrate", Theme.Main)
+AddToggle(TabCheats, "Auto Minigame (ATM/Fish)", "AutoMinigame", Theme.Main)
+AddToggle(TabCheats, "Auto Pickup Items", "AutoPickup", Theme.Main)
 
+-- COMBAT
 AddToggle(TabCombat, "Aimbot", "AimbotEnabled", Theme.Combat)
 AddSlider(TabCombat, "FOV Radio", 30, 300, 100, "FOVRadius", Theme.Combat)
 AddToggle(TabCombat, "Show FOV Anillo", "FOVEnabled", Theme.Combat)
 AddToggle(TabCombat, "Silent Aim", "SilentAim", Theme.Combat)
-
+AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) -- 🔫 BOTÓN NUEVO
 
 -- LOGICA WALL CHECK
 local function VerificarParedVisibilidad(objetivoParte)
@@ -943,6 +963,7 @@ AddToggle(TabVisuals, "ESP Health", "ESPHealth", Theme.Visuals)
 AddToggle(TabVisuals, "Traces", "Traces", Theme.Visuals)
 AddToggle(TabVisuals, "ESP Gun", "ESPGun", Theme.Visuals)
 AddToggle(TabVisuals, "ESP Gun Distancia", "ESPGunDist", Theme.Visuals)
+AddToggle(TabVisuals, "Dropped Items ESP", "DroppedItemESP", Theme.Visuals) --  BOTÓN NUEVO
 
 local BtnServerHop = AddButton(TabMisc, "Server Hop 🌐", Theme.Misc)
 local BtnRejoin = AddButton(TabMisc, "Rejoin Server 🔄", Theme.Misc)
