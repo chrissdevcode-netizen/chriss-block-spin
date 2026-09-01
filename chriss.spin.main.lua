@@ -1016,12 +1016,14 @@ BtnRejoin.MouseButton1Click:Connect(function()
 end)
 
 
--- ============================================================
--- 👁️ SISTEMA ESP VISUAL (JUGADORES + INVENTARIO BILLBOARD + DROPS)
--- ============================================================
+
+
+-- 👁️ SISTEMA ESP VISUAL
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Items = ReplicatedStorage:FindFirstChild("Items")
+local Items = ReplicatedStorage:WaitForChild("Items", 8)
 local DroppedItems = workspace:FindFirstChild("DroppedItems")
+
 
 local RarityColors = {
     Common    = Color3.fromRGB(255, 255, 255),
@@ -1034,40 +1036,78 @@ local RarityColors = {
 
 local WeaponRegistry = {}
 local PlayerBillboards = {}
+local inventoryWatchers = {}
 
--- 1. BASE DE DATOS DE ARMAS PARA IMÁGENES
+--  BASE DE DATOS EXACTA PARA IMÁGENES 
+local function getItemKey(tool)
+    local handle      = tool:FindFirstChild("Handle")
+    local displayName = tool:GetAttribute("DisplayName") or tool.Name
+    local itemId      = tool:GetAttribute("ItemId") or tool:GetAttribute("Id") or tool.Name
+    local rarity      = tool:GetAttribute("RarityName") or "Common"
+
+    if handle then
+        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+        if mesh and mesh.MeshId ~= "" then
+            return mesh.MeshId .. (mesh.TextureId or "") .. "_RARITY_" .. rarity
+        end
+        if handle:IsA("MeshPart") and handle.MeshId ~= "" then
+            return handle.MeshId .. (handle.TextureID or "") .. "_RARITY_" .. rarity
+        end
+    end
+
+    if itemId and itemId ~= "" and itemId ~= tool.Name then
+        return "ITEMID_" .. itemId .. "_RARITY_" .. rarity
+    end
+    return "NAME_" .. displayName .. "_" .. tool.Name .. "_RARITY_" .. rarity
+end
+
 local function registerItems(folder)
     if not folder then return end
     for _, tool in ipairs(folder:GetChildren()) do
         if tool:IsA("Tool") then
-            local rarity = tool:GetAttribute("RarityName") or "Common"
+            local rarity  = tool:GetAttribute("RarityName") or "Common"
             local imageId = tool:GetAttribute("ImageId") or "rbxassetid://7072725737"
-            WeaponRegistry[tool.Name] = { Rarity = rarity, ImageId = imageId, Color = RarityColors[rarity] or Color3.new(1,1,1) }
+            WeaponRegistry[getItemKey(tool)] = { 
+                ToolName = tool.Name,
+                Rarity = rarity, 
+                ImageId = imageId, 
+                Color = RarityColors[rarity] or Color3.new(1,1,1) 
+            }
         end
     end
 end
 
 if Items then
-    for _, f in ipairs({"gun", "melee", "throwable", "consumable", "farming", "misc", "rod", "fish"}) do
-        registerItems(Items:FindFirstChild(f))
+    for _, folderName in ipairs({"gun", "melee", "throwable", "consumable", "farming", "misc", "rod", "fish"}) do
+        registerItems(Items:FindFirstChild(folderName))
     end
 end
 
--- 2. CREADOR DE INVENTARIO BILLBOARD (REEMPLAZA EL TEXTO VIEJO)
+local function getWeaponInfo(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    return WeaponRegistry[getItemKey(tool)]
+end
+
+-- 2. CREADOR DE INVENTARIO BILLBOARD (DINÁMICO)
 local function updateInventoryBillboard(player)
-    if player == LocalPlayer or not player.Character then return end
+    if player == LocalPlayer then return end
     local char = player.Character
+    if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    if PlayerBillboards[player] then PlayerBillboards[player]:Destroy() end
-    if not Config.ESPGun then return end -- Si está apagado, no lo crea
+    if PlayerBillboards[player] then 
+        PlayerBillboards[player]:Destroy() 
+        PlayerBillboards[player] = nil
+    end
 
     local gui = Instance.new("BillboardGui")
+    gui.Name = "InvESP"
     gui.Adornee = root
     gui.Size = UDim2.new(0, 90, 0, 20)
-    gui.StudsOffset = Vector3.new(0, -4, 0)
+    gui.StudsOffset = Vector3.new(0, -5, 0)
     gui.AlwaysOnTop = true
+    gui.Enabled = Config.ESPGun == true -- Controlado por tu menú
     gui.Parent = char
 
     local layout = Instance.new("UIListLayout")
@@ -1077,10 +1117,12 @@ local function updateInventoryBillboard(player)
     layout.Parent = gui
 
     local tools = {}
-    local bag = player:FindFirstChild("Backpack")
-    if bag then
-        for _, t in ipairs(bag:GetChildren()) do
-            if t:IsA("Tool") and t.Name ~= "Fists" then table.insert(tools, t) end
+    for _, bagName in ipairs({"Backpack", "StarterGear", "StarterPack"}) do
+        local bag = player:FindFirstChild(bagName)
+        if bag then
+            for _, t in ipairs(bag:GetChildren()) do
+                if t:IsA("Tool") and t.Name ~= "Fists" then table.insert(tools, t) end
+            end
         end
     end
     for _, t in ipairs(char:GetChildren()) do
@@ -1088,7 +1130,7 @@ local function updateInventoryBillboard(player)
     end
 
     for _, tool in ipairs(tools) do
-        local info = WeaponRegistry[tool.Name]
+        local info = getWeaponInfo(tool)
         if info then
             local img = Instance.new("ImageLabel")
             img.Size = UDim2.new(0, 20, 0, 20)
@@ -1106,7 +1148,25 @@ local function updateInventoryBillboard(player)
     PlayerBillboards[player] = gui
 end
 
--- 3. MOTOR DE ESP (CAJAS, VIDA Y DROP ESP)
+local function watchInventory(player)
+    if inventoryWatchers[player] then return end
+    local conns = {}
+    local function refresh() task.defer(updateInventoryBillboard, player) end
+
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        table.insert(conns, backpack.ChildAdded:Connect(refresh))
+        table.insert(conns, backpack.ChildRemoved:Connect(refresh))
+    end
+    local char = player.Character
+    if char then
+        table.insert(conns, char.ChildAdded:Connect(function(c) if c:IsA("Tool") then refresh() end end))
+        table.insert(conns, char.ChildRemoved:Connect(function(c) if c:IsA("Tool") then refresh() end end))
+    end
+    inventoryWatchers[player] = conns
+end
+
+--  MOTOR DE ESP Y DROPS (
 local ESPGui = Instance.new("ScreenGui")
 ESPGui.Name = "BulletConflictESP"
 ESPGui.IgnoreGuiInset = true
@@ -1139,13 +1199,30 @@ local function AddESP(player)
     cache.HealthFill = CreateUIElement("Frame", { BackgroundColor3 = Color3.fromRGB(0, 255, 0), BorderSizePixel = 0, Visible = false, Parent = cache.HealthBg })
     cache.Trace = CreateUIElement("Frame", { BackgroundColor3 = Color3.fromRGB(255, 0, 0), BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = ESPGui })
     
-    player.CharacterAdded:Connect(function() task.wait(1); updateInventoryBillboard(player) end)
+    player.CharacterAdded:Connect(function() 
+        task.wait(0.5)
+        updateInventoryBillboard(player)
+        watchInventory(player)
+    end)
+    
+    if player.Character then
+        updateInventoryBillboard(player)
+        watchInventory(player)
+    end
 end
 
 local function RemoveESP(player)
     if espCache[player] then
         for _, el in pairs(espCache[player]) do if el then el:Destroy() end end
         espCache[player] = nil
+    end
+    if inventoryWatchers[player] then
+        for _, c in ipairs(inventoryWatchers[player]) do pcall(function() c:Disconnect() end) end
+        inventoryWatchers[player] = nil
+    end
+    if PlayerBillboards[player] then
+        PlayerBillboards[player]:Destroy()
+        PlayerBillboards[player] = nil
     end
 end
 
@@ -1168,13 +1245,14 @@ RunService.RenderStepped:Connect(function()
         if not character or not humanoid or humanoid.Health <= 0 or not rootPart or not head then
             cache.Highlight.Enabled = false; cache.Box.Visible = false; cache.NameText.Visible = false
             cache.DistText.Visible = false; cache.HealthBg.Visible = false; cache.Trace.Visible = false
-            if PlayerBillboards[player] then PlayerBillboards[player]:Destroy(); PlayerBillboards[player] = nil end
+            if PlayerBillboards[player] then PlayerBillboards[player].Enabled = false end
             continue
         end
 
-        -- Actualizar Inventory Billboard
-        if Config.ESPGun and not PlayerBillboards[player] then updateInventoryBillboard(player) 
-        elseif not Config.ESPGun and PlayerBillboards[player] then PlayerBillboards[player]:Destroy(); PlayerBillboards[player] = nil end
+        -- VINCULAR INVENTORY ESP CON EL TOGGLE 
+        if PlayerBillboards[player] then
+            PlayerBillboards[player].Enabled = Config.ESPGun == true
+        end
 
         local rootPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
         if onScreen then
@@ -1232,12 +1310,23 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ESP DROPS (OBJETOS EN EL SUELO)
-    if not Config.DroppedItemESP or not DroppedItems then
-        for _, draw in pairs(dropDrawings) do if draw.txt then draw.txt.Visible = false end end
-        return
+
+    -- 📦 ESP DROPS 
+    
+    --  LIMPIEZA DE BASURA
+    for model, data in pairs(dropDrawings) do
+        if not model or not model.Parent or model.Parent ~= DroppedItems then
+            if data.txt then data.txt:Remove() end
+            dropDrawings[model] = nil
+        else
+            data.txt.Visible = false 
+        end
     end
 
+    --  Si el botón ESP de Drops está apagado, nos salimos
+    if not Config.DroppedItemESP or not DroppedItems then return end
+
+    -- Dibujar solo los objetos que siguen existiendo en el suelo
     for _, model in ipairs(DroppedItems:GetChildren()) do
         if model:IsA("Model") and model:FindFirstChild("PickUpZone") then
             local data = dropDrawings[model]
@@ -1249,14 +1338,22 @@ RunService.RenderStepped:Connect(function()
             
             local pos, vis = camera:WorldToViewportPoint(model.PickUpZone.Position)
             if vis then
-                local rarity = WeaponRegistry[model.Name] and WeaponRegistry[model.Name].Rarity or "Common"
+                local wName = model.Name
+                local rarity = "Common"
+                
+                -- Busca la rareza en nuestra base de datos perfecta
+                for key, info in pairs(WeaponRegistry) do
+                    if info.ToolName == wName or key:find(wName) then
+                        rarity = info.Rarity
+                        break
+                    end
+                end
+                
                 data.txt.Color = RarityColors[rarity] or Color3.new(1,1,1)
                 local amt = model:GetAttribute("Amount") or 1
                 data.txt.Text = model.Name .. (amt > 1 and " ["..amt.."]" or "")
                 data.txt.Position = Vector2.new(pos.X, pos.Y)
-                data.txt.Visible = true
-            else
-                data.txt.Visible = false
+                data.txt.Visible = true -- Se prende solo si está enfrente
             end
         end
     end
