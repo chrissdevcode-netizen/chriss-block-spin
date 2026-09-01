@@ -1417,69 +1417,135 @@ end)
 
 
 
---  SISTEMA DE SUPERVIVENCIA, AUTOMATIZACIÓN 
+-- ============================================================
+-- 🤖 SISTEMA DE SUPERVIVENCIA, AUTOMATIZACIÓN Y COMBATE (V2 BLINDADO)
+-- ============================================================
 
 local VirtualUser = game:GetService("VirtualUser")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
---  FAKE NAME
-local FAKE_NAME = "CS / {MODS}"
-task.spawn(function()
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    while task.wait(1.5) do -- Revisión más lenta para no dar lag
-        if Config.HideName then
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
-                for _, v in ipairs(char:GetChildren()) do -- GetChildren es más rápido
-                    if v:IsA("BillboardGui") then v.Enabled = false end
-                end
+-- 1. FAKE NAME (Lógica interceptora avanzada)
+local FAKE_NAME = "CS / {MODSXZ}"
+
+local function ocultarNombreEnTexto(textoOriginal)
+    if not Config.HideName or not textoOriginal then return textoOriginal end
+    local realName = LocalPlayer.Name
+    local displayName = LocalPlayer.DisplayName
+    local modificado = textoOriginal:gsub(realName, FAKE_NAME)
+    return modificado:gsub(displayName, FAKE_NAME)
+end
+
+local function aplicarFiltroGlobal(objeto)
+    if objeto:IsA("TextLabel") or objeto:IsA("TextBox") or objeto:IsA("TextButton") then
+        objeto.Text = ocultarNombreEnTexto(objeto.Text)
+        objeto:GetPropertyChangedSignal("Text"):Connect(function()
+            if Config.HideName then
+                local nuevo = ocultarNombreEnTexto(objeto.Text)
+                if objeto.Text ~= nuevo then objeto.Text = nuevo end
             end
-            
-            -- Solo buscamos en PlayerGui en vez de todo el juego
-            for _, guiObj in ipairs(PlayerGui:GetDescendants()) do
-                if guiObj:IsA("TextLabel") or guiObj:IsA("TextBox") or guiObj:IsA("TextButton") then
-                    if guiObj.Text:find(LocalPlayer.Name) or guiObj.Text:find(LocalPlayer.DisplayName) then
-                        guiObj.Text = guiObj.Text:gsub(LocalPlayer.Name, FAKE_NAME):gsub(LocalPlayer.DisplayName, FAKE_NAME)
+        end)
+    elseif objeto:IsA("BillboardGui") then
+        for _, desc in ipairs(objeto:GetDescendants()) do
+            if desc:IsA("TextLabel") or desc:IsA("TextBox") or desc:IsA("TextButton") then
+                desc.Text = ocultarNombreEnTexto(desc.Text)
+                desc:GetPropertyChangedSignal("Text"):Connect(function()
+                    if Config.HideName then
+                        local nuevo = ocultarNombreEnTexto(desc.Text)
+                        if desc.Text ~= nuevo then desc.Text = nuevo end
                     end
-                end
+                end)
             end
         end
     end
-end)
+end
 
--- 2. SPINBOT (EN RENDERSTEPPED)
+for _, guiObj in ipairs(game:GetDescendants()) do pcall(function() aplicarFiltroGlobal(guiObj) end) end
+game.DescendantAdded:Connect(function(obj) pcall(function() aplicarFiltroGlobal(obj) end) end)
+
+local function hideMyNameVisuals()
+    if not Config.HideName then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+    
+    for _,v in pairs(character:GetDescendants()) do
+        if v:IsA("BillboardGui") then
+            v.Enabled = false
+            for _, label in ipairs(v:GetDescendants()) do
+                if label:IsA("TextLabel") then label.Text = ocultarNombreEnTexto(label.Text) end
+            end
+        elseif v:IsA("Model") and (v.Name:find(LocalPlayer.Name) or v.Name:find("Car")) then
+            if v.Name:find(LocalPlayer.Name) then v.Name = FAKE_NAME end
+        end
+    end
+end
+RunService.Heartbeat:Connect(hideMyNameVisuals)
+
+--  NO RECOIL Y SPINBOT (Fuerza bruta necesaria)
+local function limpiarRecoil(tool)
+    if not Config.NoRecoil then return end
+    pcall(function()
+        for _, v in ipairs(tool:GetDescendants()) do
+            local nombre = v.Name:lower()
+            if nombre:find("recoil") or nombre:find("shake") or nombre:find("kick") or nombre:find("spread") or nombre:find("bobble") then
+                if v:IsA("NumberValue") or v:IsA("IntValue") then v.Value = 0
+                elseif v:IsA("Vector3Value") then v.Value = Vector3.new(0, 0, 0)
+                elseif v:IsA("Script") or v:IsA("LocalScript") then v.Disabled = true
+                elseif v:IsA("ModuleScript") then pcall(function() require(v) end) end
+            end
+        end
+        for attrName, _ in pairs(tool:GetAttributes()) do
+            if attrName:lower():find("recoil") or attrName:lower():find("shake") or attrName:lower():find("spread") then
+                tool:SetAttribute(attrName, 0)
+            end
+        end
+    end)
+end
+
 RunService.RenderStepped:Connect(function()
+    -- Spinbot
     if Config.SpinBot and Character and Character:FindFirstChild("HumanoidRootPart") then
         local root = Character.HumanoidRootPart
         root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Config.SpinSpeed), 0)
     end
-end)
-
---NO RECOIL - OPTIMIZADO (FUERA DEL RENDERSTEPPED)
-task.spawn(function()
-    while task.wait(0.5) do -- Lo checamos cada medio segundo en vez de 60 veces por segundo
-        if Config.NoRecoil and Character then
-            local tool = Character:FindFirstChildOfClass("Tool") -- Solo le quitamos el recoil al arma que tienes en la mano
-            if tool then
-                for attr, _ in pairs(tool:GetAttributes()) do
-                    if attr:lower():find("recoil") or attr:lower():find("spread") then
-                        tool:SetAttribute(attr, 0)
-                    end
-                end
-                for _, v in ipairs(tool:GetDescendants()) do
-                    local n = v.Name:lower()
-                    if n:find("recoil") or n:find("spread") or n:find("kick") or n:find("shake") then
-                        if v:IsA("NumberValue") or v:IsA("IntValue") then v.Value = 0 end
-                    end
-                end
+    -- No Recoil persistente
+    if Config.NoRecoil then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, tool in ipairs(char:GetChildren()) do if tool:IsA("Tool") then limpiarRecoil(tool) end end
             end
-        end
+            local backpack = LocalPlayer:FindFirstChild("Backpack")
+            if backpack then
+                for _, tool in ipairs(backpack:GetChildren()) do if tool:IsA("Tool") then limpiarRecoil(tool) end end
+            end
+        end)
     end
 end)
 
--- 3. AUTO BLOOD BAG (<70 HP) INSTANTÁNEO
+-- AUTO BLOOD BAG (<70 HP) INSTANTÁNEO
+local function eliminarAnimacionesDeUso(char)
+    local animator = char:FindFirstChildOfClass("Humanoid") and char.Humanoid:FindFirstChildOfClass("Animator")
+    if animator then
+        pcall(function()
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                local name = track.Name:lower()
+                if name:find("ammo") or name:find("crate") or name:find("blood") or name:find("use") or name:find("heal") then
+                    track:Stop(0)
+                end
+            end
+        end)
+    end
+end
+
+RunService.Stepped:Connect(function()
+    if Config.AutoBlood or Config.AutoSkipCrate then
+        if Character then eliminarAnimacionesDeUso(Character) end
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.1) do
         if Config.AutoBlood and Character then
@@ -1489,46 +1555,61 @@ task.spawn(function()
                 local bloodBag = backpack:FindFirstChild("Blood Bag") or Character:FindFirstChild("Blood Bag")
                 if bloodBag then
                     if bloodBag.Parent == backpack then hum:EquipTool(bloodBag) end
-                    local remote = bloodBag:FindFirstChildWhichIsA("RemoteEvent")
+                    local remote = bloodBag:FindFirstChildWhichIsA("RemoteEvent") or bloodBag:FindFirstChild("ServerControl") or bloodBag:FindFirstChild("Use")
                     if remote then pcall(function() remote:FireServer() end) end
                     pcall(function() bloodBag:Activate() end)
                     
-                    -- Cortar Animación
-                    local animator = hum:FindFirstChildOfClass("Animator")
-                    if animator then
-                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                            if track.Name:lower():find("blood") or track.Name:lower():find("use") then track:Stop(0) end
-                        end
-                    end
-                    if VirtualUser then VirtualUser:Button1Down(Vector2.new(0,0)); task.wait(0.01); VirtualUser:Button1Up(Vector2.new(0,0)) end
+                    eliminarAnimacionesDeUso(Character)
+                    if VirtualUser then pcall(function() VirtualUser:Button1Down(Vector2.new(0,0)); task.wait(0.01); VirtualUser:Button1Up(Vector2.new(0,0)) end) end
                 end
             end
         end
     end
 end)
 
---  AUTO SKIP CRATE & AMMO
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- AUTO SKIP CRATE & AMMO
+local CrateController
+pcall(function() CrateController = require(ReplicatedStorage.Modules.Game.CrateSystem.Crate) end)
+
 pcall(function()
     local UtilModule = require(ReplicatedStorage.Modules.Core.Util)
-    local old_tween = UtilModule.tween
-    UtilModule.tween = function(instance, tweenInfo, properties, ...)
-        if Config.AutoSkipCrate and instance:IsA("NumberValue") and properties.Value == 1 then
-            tweenInfo = TweenInfo.new(0, tweenInfo.EasingStyle, tweenInfo.EasingDirection)
+    if UtilModule.tween then
+        local old_tween = UtilModule.tween
+        UtilModule.tween = function(instance, tweenInfo, properties, ...)
+            if Config.AutoSkipCrate and instance:IsA("NumberValue") and properties.Value == 1 then
+                if tweenInfo.Time > 0 then
+                    tweenInfo = TweenInfo.new(0, tweenInfo.EasingStyle, tweenInfo.EasingDirection)
+                end
+            end
+            return old_tween(instance, tweenInfo, properties, ...)
         end
-        return old_tween(instance, tweenInfo, properties, ...)
     end
 end)
 
--- 5. AUTO MINIGAME (ATM / FISHING)
-pcall(function()
-    local SliderModule = require(ReplicatedStorage.Modules.Game.Minigames.SliderMinigame)
-    task.spawn(function()
-        while task.wait(0.04) do
-            if Config.AutoMinigame and SliderModule and SliderModule.enabled and SliderModule.enabled.get() then
-                pcall(function()
-                    local current = SliderModule.needle_pos.get()
-                    local target = SliderModule.target_pos.get()
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.AutoSkipCrate and CrateController then
+            pcall(function()
+                for _, crate in pairs(CrateController.class.objects) do
+                    crate.states.open.set(true)
+                    CrateController.skipping.set(true)
+                end
+            end)
+        end
+    end
+end)
+
+--  AUTO MINIGAME (ATM / FISHING)
+local SliderModule
+pcall(function() SliderModule = require(ReplicatedStorage.Modules.Game.Minigames.SliderMinigame) end)
+
+task.spawn(function()
+    while task.wait(0.04) do
+        if Config.AutoMinigame and SliderModule and SliderModule.enabled and SliderModule.enabled.get() then
+            pcall(function()
+                local current = SliderModule.needle_pos.get()
+                local target = SliderModule.target_pos.get()
+                if typeof(current) == "number" and typeof(target) == "number" then
                     local diff = target - current
                     SliderModule.needle_pos.set(current + diff * 0.12)
                     if math.abs(diff) < 0.025 then
@@ -1538,22 +1619,23 @@ pcall(function()
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                         task.wait(0.35)
                     end
-                end)
-            end
+                end
+            end)
         end
-    end)
+    end
 end)
 
--- AUTO PICKUP FLOTANTE 
+--  AUTO PICKUP FLOTANTE (RECOLECCIÓN CERCANA CON GETGC)
 local Counter
 pcall(function()
     for _, v in ipairs(getgc(true)) do
         if typeof(v) == "table" and rawget(v, "event") and rawget(v, "func") then Counter = v; break end
     end
 end)
+
 local function netGet(...)
     if not Counter or not Counter.func then return end
-    Counter.func = Counter.func + 1
+    Counter.func = (Counter.func or 0) + 1
     return ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get"):InvokeServer(Counter.func, ...)
 end
 
@@ -1565,7 +1647,7 @@ task.spawn(function()
             if root then
                 for _, item in ipairs(DroppedItems:GetChildren()) do
                     if item:IsA("Model") and item:FindFirstChild("PickUpZone") then
-                        if (item:GetPivot().Position - root.Position).Magnitude < 45 then
+                        if (item:GetPivot().Position - root.Position).Magnitude < 50 then
                             pcall(netGet, "pickup_dropped_item", item)
                         end
                     end
@@ -1599,8 +1681,7 @@ Instance.new("UICorner", APBtn).CornerRadius = UDim.new(0, 12)
 local APStroke = Instance.new("UIStroke", APBtn)
 APStroke.Color = Color3.fromRGB(255, 80, 80); APStroke.Thickness = 1.5
 
-APBtn.MouseButton1Click:Connect(function()
-    Config.AutoPickup = not Config.AutoPickup
+local function updateAutoPickupUI()
     if Config.AutoPickup then
         APIcon.ImageColor3 = Color3.fromRGB(80, 255, 120)
         APStroke.Color = Color3.fromRGB(80, 255, 120)
@@ -1608,4 +1689,15 @@ APBtn.MouseButton1Click:Connect(function()
         APIcon.ImageColor3 = Color3.fromRGB(255, 80, 80)
         APStroke.Color = Color3.fromRGB(255, 80, 80)
     end
+end
+
+-- Sincronizar el botón si lo activas desde el menú principal
+RunService.Heartbeat:Connect(function()
+    if APIcon.ImageColor3 == Color3.fromRGB(80, 255, 120) and not Config.AutoPickup then updateAutoPickupUI() end
+    if APIcon.ImageColor3 == Color3.fromRGB(255, 80, 80) and Config.AutoPickup then updateAutoPickupUI() end
+end)
+
+APBtn.MouseButton1Click:Connect(function()
+    Config.AutoPickup = not Config.AutoPickup
+    updateAutoPickupUI()
 end)
