@@ -1015,117 +1015,107 @@ BtnRejoin.MouseButton1Click:Connect(function()
     end
 end)
 
---  SISTEMA ESP
-local WeaponColors = {
-    
-    --  ROJO FUERTE SANGRE
-    ["M249"] = Color3.fromRGB(139, 0, 0),
-    ["Anaconda"] = Color3.fromRGB(139, 0, 0),
 
-    --  DORADO
-    ["AUG"] = Color3.fromRGB(255, 215, 0),
-    ["AWP"] = Color3.fromRGB(255, 215, 0),
-    ["P90"] = Color3.fromRGB(255, 215, 0),
-    ["M16"] = Color3.fromRGB(255, 215, 0),
-    ["AK47"] = Color3.fromRGB(255, 215, 0),
-    ["MP5"] = Color3.fromRGB(255, 215, 0),
-    ["Bizon"] = Color3.fromRGB(255, 215, 0),
-    ["Remington"] = Color3.fromRGB(255, 215, 0),
-    ["RPG"] = Color3.fromRGB(255, 215, 0),
-    ["Tactical Axe"] = Color3.fromRGB(255, 215, 0),
-    ["Tactical Knife"] = Color3.fromRGB(255, 215, 0),
-    ["Tactical Shovel"] = Color3.fromRGB(255, 215, 0),
-    ["Marlin"] = Color3.fromRGB(255, 215, 0), -- El de los 100k 🤑
+-- ============================================================
+-- 👁️ SISTEMA ESP VISUAL (JUGADORES + INVENTARIO BILLBOARD + DROPS)
+-- ============================================================
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Items = ReplicatedStorage:FindFirstChild("Items")
+local DroppedItems = workspace:FindFirstChild("DroppedItems")
 
-    --  MORADO
-    ["M24"] = Color3.fromRGB(160, 32, 240),
-    ["Skorpion"] = Color3.fromRGB(160, 32, 240),
-    ["Double Barrel"] = Color3.fromRGB(160, 32, 240),
-    ["Machette"] = Color3.fromRGB(160, 32, 240),
-    ["Combat Axe"] = Color3.fromRGB(160, 32, 240),
-    ["Sledge Hammer"] = Color3.fromRGB(160, 32, 240),
-    ["Sledgehammer"] = Color3.fromRGB(160, 32, 240),
-    ["Barbed Baseball Bat"] = Color3.fromRGB(160, 32, 240),
-    ["Grenade"] = Color3.fromRGB(160, 32, 240),
-    ["Molotov"] = Color3.fromRGB(160, 32, 240),
-    ["Firework Launcher"] = Color3.fromRGB(160, 32, 240),
-    ["Tuna"] = Color3.fromRGB(160, 32, 240),
-
-    --  AZUL FUERTE
-    ["Glock"] = Color3.fromRGB(0, 70, 255),
-    ["P226"] = Color3.fromRGB(0, 70, 255),
-    ["Uzi"] = Color3.fromRGB(0, 70, 255),
-    ["Sawnoff"] = Color3.fromRGB(0, 70, 255),
-
-    --  AZUL (Normal / Claro)
-    ["Hunting Rifle"] = Color3.fromRGB(0, 150, 255),
-    ["Switchblade"] = Color3.fromRGB(0, 150, 255),
-    ["Crowbar"] = Color3.fromRGB(0, 150, 255),
-    ["Metal Baseball Bat"] = Color3.fromRGB(0, 150, 255),
-    ["Cinder Block"] = Color3.fromRGB(0, 150, 255),
-    ["Frying Pan"] = Color3.fromRGB(0, 150, 255),
-    ["Dumbbell Plate"] = Color3.fromRGB(0, 150, 255),
-    ["Brainrot Slap"] = Color3.fromRGB(0, 150, 255),
-    ["FishingRodUltimate"] = Color3.fromRGB(0, 150, 255),
-    ["FishingRodPro"] = Color3.fromRGB(0, 150, 255),
-    ["FishingRodAdvanced"] = Color3.fromRGB(0, 150, 255),
-
-    --  VERDE
-    ["G3"] = Color3.fromRGB(46, 204, 113),
-    ["Baseball Bat"] = Color3.fromRGB(50, 255, 100),
-    ["Nailed Wooden Board"] = Color3.fromRGB(50, 255, 100),
-    ["Chair Leg"] = Color3.fromRGB(50, 255, 100),
-    ["Brick"] = Color3.fromRGB(50, 255, 100),
-    ["Shovel"] = Color3.fromRGB(50, 255, 100),
-    ["Rusty Shovel"] = Color3.fromRGB(50, 255, 100),
-    ["Rolling Pin"] = Color3.fromRGB(50, 255, 100),
-    ["Pool Cue"] = Color3.fromRGB(50, 255, 100),
-    ["Bowling Pin"] = Color3.fromRGB(50, 255, 100),
-
-    --  GRIS
-    ["Taser"] = Color3.fromRGB(150, 150, 150),
-    ["Shank"] = Color3.fromRGB(150, 150, 150),
-    ["Metal Pipe"] = Color3.fromRGB(150, 150, 150),
-    ["Fire Cracker"] = Color3.fromRGB(150, 150, 150),
-    ["Snowball"] = Color3.fromRGB(150, 150, 150),
-    ["FishingRodRegular"] = Color3.fromRGB(150, 150, 150)
+local RarityColors = {
+    Common    = Color3.fromRGB(255, 255, 255),
+    Uncommon  = Color3.fromRGB(99, 255, 52),
+    Rare      = Color3.fromRGB(51, 170, 255),
+    Epic      = Color3.fromRGB(237, 44, 255),
+    Legendary = Color3.fromRGB(255, 150, 0),
+    Omega     = Color3.fromRGB(255, 20, 51),
 }
-    
--- FUNCIÓN BLINDADA (Filtra IDs numéricos y basura)
-local function GetPlayerTool(player)
-    if player.Character then
-        for _, tool in pairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                local wName = tool.Name
-                if WeaponColors[wName] and wName ~= "Fists" and not tonumber(wName) then
-                    return wName
-                end
-            end
+
+local WeaponRegistry = {}
+local PlayerBillboards = {}
+
+-- 1. BASE DE DATOS DE ARMAS PARA IMÁGENES
+local function registerItems(folder)
+    if not folder then return end
+    for _, tool in ipairs(folder:GetChildren()) do
+        if tool:IsA("Tool") then
+            local rarity = tool:GetAttribute("RarityName") or "Common"
+            local imageId = tool:GetAttribute("ImageId") or "rbxassetid://7072725737"
+            WeaponRegistry[tool.Name] = { Rarity = rarity, ImageId = imageId, Color = RarityColors[rarity] or Color3.new(1,1,1) }
         end
     end
-    if player:FindFirstChild("Backpack") then
-        for _, tool in pairs(player.Backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                local wName = tool.Name
-                if WeaponColors[wName] and wName ~= "Fists" and not tonumber(wName) then
-                    return wName
-                end
-            end
-        end
-    end
-    return nil
 end
 
--- CONTENEDOR GUI SEGURO
+if Items then
+    for _, f in ipairs({"gun", "melee", "throwable", "consumable", "farming", "misc", "rod", "fish"}) do
+        registerItems(Items:FindFirstChild(f))
+    end
+end
+
+-- 2. CREADOR DE INVENTARIO BILLBOARD (REEMPLAZA EL TEXTO VIEJO)
+local function updateInventoryBillboard(player)
+    if player == LocalPlayer or not player.Character then return end
+    local char = player.Character
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    if PlayerBillboards[player] then PlayerBillboards[player]:Destroy() end
+    if not Config.ESPGun then return end -- Si está apagado, no lo crea
+
+    local gui = Instance.new("BillboardGui")
+    gui.Adornee = root
+    gui.Size = UDim2.new(0, 90, 0, 20)
+    gui.StudsOffset = Vector3.new(0, -4, 0)
+    gui.AlwaysOnTop = true
+    gui.Parent = char
+
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.Padding = UDim.new(0, 5)
+    layout.Parent = gui
+
+    local tools = {}
+    local bag = player:FindFirstChild("Backpack")
+    if bag then
+        for _, t in ipairs(bag:GetChildren()) do
+            if t:IsA("Tool") and t.Name ~= "Fists" then table.insert(tools, t) end
+        end
+    end
+    for _, t in ipairs(char:GetChildren()) do
+        if t:IsA("Tool") and t.Name ~= "Fists" then table.insert(tools, t) end
+    end
+
+    for _, tool in ipairs(tools) do
+        local info = WeaponRegistry[tool.Name]
+        if info then
+            local img = Instance.new("ImageLabel")
+            img.Size = UDim2.new(0, 20, 0, 20)
+            img.BackgroundTransparency = 0.1
+            img.Image = info.ImageId
+            img.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
+            Instance.new("UICorner", img).CornerRadius = UDim.new(0, 5)
+            
+            local stroke = Instance.new("UIStroke", img)
+            stroke.Color = info.Color
+            stroke.Thickness = 1.5
+            img.Parent = gui
+        end
+    end
+    PlayerBillboards[player] = gui
+end
+
+-- 3. MOTOR DE ESP (CAJAS, VIDA Y DROP ESP)
 local ESPGui = Instance.new("ScreenGui")
 ESPGui.Name = "BulletConflictESP"
 ESPGui.IgnoreGuiInset = true
 ESPGui.ResetOnSpawn = false
-local success = pcall(function() ESPGui.Parent = game:GetService("CoreGui") end)
-if not success then ESPGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+pcall(function() ESPGui.Parent = game:GetService("CoreGui") end)
+if not ESPGui.Parent then ESPGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- TABLA CACHÉ PARA EVITAR DUPLICADOS Y MEMORY LEAKs
 local espCache = {}
+local dropDrawings = {}
 
 local function CreateUIElement(class, properties)
     local element = Instance.new(class)
@@ -1135,215 +1125,146 @@ end
 
 local function AddESP(player)
     if player == LocalPlayer or espCache[player] then return end
-
     local cache = {}
     espCache[player] = cache
 
-    -- HIGHLIGHT 
-    cache.Highlight = CreateUIElement("Highlight", {
-        FillTransparency = 0.5, 
-        FillColor = Color3.fromRGB(255, 50, 50),
-        OutlineColor = Color3.fromRGB(255, 0, 0),
-        OutlineTransparency = 0,
-        DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
-        Parent = ESPGui, 
-        Enabled = false
-    })
-
-    -- ESP BOX 
-    cache.Box = CreateUIElement("Frame", {
-        BackgroundTransparency = 1,
-        Visible = false,
-        Parent = ESPGui
-    })
-    local boxStroke = Instance.new("UIStroke", cache.Box)
-    boxStroke.Color = Color3.fromRGB(255, 0, 0)
-    boxStroke.Thickness = 1.5
-
-    -- TEXTOS
-    cache.NameText = CreateUIElement("TextLabel", {
-        BackgroundTransparency = 1, Visible = false, Font = Enum.Font.GothamBold,
-        TextSize = 12, TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = ESPGui
-    })
+    cache.Highlight = CreateUIElement("Highlight", { FillTransparency = 0.5, FillColor = Color3.fromRGB(255, 50, 50), OutlineColor = Color3.fromRGB(255, 0, 0), OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Parent = ESPGui, Enabled = false })
+    cache.Box = CreateUIElement("Frame", { BackgroundTransparency = 1, Visible = false, Parent = ESPGui })
+    local boxStroke = Instance.new("UIStroke", cache.Box); boxStroke.Color = Color3.fromRGB(255, 0, 0); boxStroke.Thickness = 1.5
+    cache.NameText = CreateUIElement("TextLabel", { BackgroundTransparency = 1, Visible = false, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Color3.fromRGB(255, 255, 255), Parent = ESPGui })
     Instance.new("UIStroke", cache.NameText).Thickness = 1.2
-
-    cache.DistText = CreateUIElement("TextLabel", {
-        BackgroundTransparency = 1, Visible = false, Font = Enum.Font.Gotham,
-        TextSize = 11, TextColor3 = Color3.fromRGB(220, 220, 220),
-        Parent = ESPGui
-    })
+    cache.DistText = CreateUIElement("TextLabel", { BackgroundTransparency = 1, Visible = false, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = Color3.fromRGB(220, 220, 220), Parent = ESPGui })
     Instance.new("UIStroke", cache.DistText).Thickness = 1.2
-
-    cache.GunText = CreateUIElement("TextLabel", {
-        BackgroundTransparency = 1, Visible = false, Font = Enum.Font.Gotham,
-        TextSize = 11, TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = ESPGui
-    })
-    Instance.new("UIStroke", cache.GunText).Thickness = 1.2
-
-    -- HEALTH BAR
-    cache.HealthBg = CreateUIElement("Frame", {
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0,
-        Visible = false, Parent = ESPGui
-    })
-    cache.HealthFill = CreateUIElement("Frame", {
-        BackgroundColor3 = Color3.fromRGB(0, 255, 0), BorderSizePixel = 0,
-        Visible = false, Parent = cache.HealthBg
-    })
-
-    -- TRACE (LÍNEA CON FRAME)
-    cache.Trace = CreateUIElement("Frame", {
-        BackgroundColor3 = Color3.fromRGB(255, 0, 0), BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = ESPGui
-    })
+    cache.HealthBg = CreateUIElement("Frame", { BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Visible = false, Parent = ESPGui })
+    cache.HealthFill = CreateUIElement("Frame", { BackgroundColor3 = Color3.fromRGB(0, 255, 0), BorderSizePixel = 0, Visible = false, Parent = cache.HealthBg })
+    cache.Trace = CreateUIElement("Frame", { BackgroundColor3 = Color3.fromRGB(255, 0, 0), BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = ESPGui })
+    
+    player.CharacterAdded:Connect(function() task.wait(1); updateInventoryBillboard(player) end)
 end
 
 local function RemoveESP(player)
     if espCache[player] then
-        for _, element in pairs(espCache[player]) do
-            if element then element:Destroy() end
-        end
+        for _, el in pairs(espCache[player]) do if el then el:Destroy() end end
         espCache[player] = nil
     end
 end
 
--- EVENTOS DE JUGADORES
 Players.PlayerAdded:Connect(AddESP)
 Players.PlayerRemoving:Connect(RemoveESP)
-for _, p in pairs(Players:GetPlayers()) do
-    AddESP(p)
-end
+for _, p in pairs(Players:GetPlayers()) do AddESP(p) end
 
--- MOTOR ÚNICO DE RENDERIZADO (NO MÁS BUCLES MÚLTIPLES)
 RunService.RenderStepped:Connect(function()
     local camera = workspace.CurrentCamera
     if not camera then return end
-
-    -- EL PUNTO DE ORIGEN PARA LAS LÍNEAS (ABAJO EN EL CENTRO)
     local screenBottomCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
 
+    -- ESP JUGADORES
     for player, cache in pairs(espCache) do
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
         local head = character and character:FindFirstChild("Head")
 
-        -- SI ESTÁ MUERTO O FUERA, APAGAMOS TODO
         if not character or not humanoid or humanoid.Health <= 0 or not rootPart or not head then
-            cache.Highlight.Enabled = false
-            cache.Highlight.Adornee = nil
-            cache.Box.Visible = false
-            cache.NameText.Visible = false
-            cache.DistText.Visible = false
-            cache.GunText.Visible = false
-            cache.HealthBg.Visible = false
-            cache.Trace.Visible = false
+            cache.Highlight.Enabled = false; cache.Box.Visible = false; cache.NameText.Visible = false
+            cache.DistText.Visible = false; cache.HealthBg.Visible = false; cache.Trace.Visible = false
+            if PlayerBillboards[player] then PlayerBillboards[player]:Destroy(); PlayerBillboards[player] = nil end
             continue
         end
 
-        local rootPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+        -- Actualizar Inventory Billboard
+        if Config.ESPGun and not PlayerBillboards[player] then updateInventoryBillboard(player) 
+        elseif not Config.ESPGun and PlayerBillboards[player] then PlayerBillboards[player]:Destroy(); PlayerBillboards[player] = nil end
 
+        local rootPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
         if onScreen then
             local distance = (camera.CFrame.Position - rootPart.Position).Magnitude
             local topPos = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.8, 0))
             local bottomPos = camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 2.5, 0))
-
             local boxHeight = math.abs(topPos.Y - bottomPos.Y)
             local boxWidth = boxHeight * 0.55
 
-            --  HIGHLIGHT
             cache.Highlight.Adornee = character
             cache.Highlight.Enabled = Config.ESPBox
-
-            --  ESP BOX 
+            
             if Config.ESPBox then
                 cache.Box.Size = UDim2.new(0, boxWidth, 0, boxHeight)
                 cache.Box.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, topPos.Y)
                 cache.Box.Visible = true
-            else
-                cache.Box.Visible = false
-            end
+            else cache.Box.Visible = false end
 
-            -- ESP NOMBRES
             if Config.ESPName then
                 cache.NameText.Text = player.Name
                 cache.NameText.Size = UDim2.new(0, boxWidth, 0, 15)
                 cache.NameText.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, topPos.Y - 18)
                 cache.NameText.Visible = true
-            else
-                cache.NameText.Visible = false
-            end
+            else cache.NameText.Visible = false end
 
-            --  ESP DISTANCIA
             local yOffset = bottomPos.Y + 4
             if Config.ESPDist then
-                cache.DistText.Text = string.format("[%d studs]", math.floor(distance))
+                cache.DistText.Text = string.format("[%d m]", math.floor(distance))
                 cache.DistText.Size = UDim2.new(0, boxWidth, 0, 15)
                 cache.DistText.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, yOffset)
                 cache.DistText.Visible = true
-                yOffset = yOffset + 14
-            else
-                cache.DistText.Visible = false
-            end
+            else cache.DistText.Visible = false end
 
-            -- ESP ARMAS (CORREGIDO PARA FILTRAR BASURA)
-            if Config.ESPGun then
-                local wName = GetPlayerTool(player)
-                if wName then
-                    cache.GunText.Text = Config.ESPGunDist and string.format("%s [%d studs]", wName, math.floor(distance)) or wName
-                    cache.GunText.TextColor3 = WeaponColors[wName]
-                    cache.GunText.Size = UDim2.new(0, boxWidth, 0, 15)
-                    cache.GunText.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, yOffset)
-                    cache.GunText.Visible = true
-                else
-                    cache.GunText.Visible = false
-                end
-            else
-                cache.GunText.Visible = false
-            end
-
-            -- ESP HEALTH BAR
             if Config.ESPHealth then
                 local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
-                local barHeight = boxHeight
-                cache.HealthBg.Size = UDim2.new(0, 3, 0, barHeight)
+                cache.HealthBg.Size = UDim2.new(0, 3, 0, boxHeight)
                 cache.HealthBg.Position = UDim2.new(0, rootPos.X - (boxWidth / 2) - 6, 0, topPos.Y)
-                
                 cache.HealthFill.Size = UDim2.new(1, 0, hpPercent, 0)
                 cache.HealthFill.Position = UDim2.new(0, 0, 1 - hpPercent, 0)
                 cache.HealthFill.BackgroundColor3 = Color3.fromHSV((hpPercent * 120) / 360, 1, 1)
-                
-                cache.HealthBg.Visible = true
-                cache.HealthFill.Visible = true
-            else
-                cache.HealthBg.Visible = false
-            end
+                cache.HealthBg.Visible = true; cache.HealthFill.Visible = true
+            else cache.HealthBg.Visible = false end
 
-            -- TRACES
             if Config.Traces then
                 local targetPos = Vector2.new(rootPos.X, bottomPos.Y)
                 local dist = (targetPos - screenBottomCenter).Magnitude
-                
                 cache.Trace.Size = UDim2.new(0, dist, 0, 1)
                 cache.Trace.Position = UDim2.new(0, (screenBottomCenter.X + targetPos.X) / 2, 0, (screenBottomCenter.Y + targetPos.Y) / 2)
                 cache.Trace.Rotation = math.deg(math.atan2(targetPos.Y - screenBottomCenter.Y, targetPos.X - screenBottomCenter.X))
                 cache.Trace.Visible = true
-            else
-                cache.Trace.Visible = false
-            end
+            else cache.Trace.Visible = false end
         else
-            cache.Highlight.Enabled = false
-            cache.Box.Visible = false
-            cache.NameText.Visible = false
-            cache.DistText.Visible = false
-            cache.GunText.Visible = false
-            cache.HealthBg.Visible = false
-            cache.Trace.Visible = false
+            cache.Highlight.Enabled = false; cache.Box.Visible = false; cache.NameText.Visible = false
+            cache.DistText.Visible = false; cache.HealthBg.Visible = false; cache.Trace.Visible = false
+        end
+    end
+
+    -- ESP DROPS (OBJETOS EN EL SUELO)
+    if not Config.DroppedItemESP or not DroppedItems then
+        for _, draw in pairs(dropDrawings) do if draw.txt then draw.txt.Visible = false end end
+        return
+    end
+
+    for _, model in ipairs(DroppedItems:GetChildren()) do
+        if model:IsA("Model") and model:FindFirstChild("PickUpZone") then
+            local data = dropDrawings[model]
+            if not data then
+                data = { txt = Drawing.new("Text") }
+                data.txt.Center = true; data.txt.Outline = true; data.txt.Size = 14; data.txt.Font = 2
+                dropDrawings[model] = data
+            end
+            
+            local pos, vis = camera:WorldToViewportPoint(model.PickUpZone.Position)
+            if vis then
+                local rarity = WeaponRegistry[model.Name] and WeaponRegistry[model.Name].Rarity or "Common"
+                data.txt.Color = RarityColors[rarity] or Color3.new(1,1,1)
+                local amt = model:GetAttribute("Amount") or 1
+                data.txt.Text = model.Name .. (amt > 1 and " ["..amt.."]" or "")
+                data.txt.Position = Vector2.new(pos.X, pos.Y)
+                data.txt.Visible = true
+            else
+                data.txt.Visible = false
+            end
         end
     end
 end)
 
+        
+
+            
 
 
                     
