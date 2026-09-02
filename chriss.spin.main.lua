@@ -1417,9 +1417,8 @@ end)
 
 
 
--- ============================================================
--- 🤖 SISTEMA DE SUPERVIVENCIA, AUTOMATIZACIÓN Y COMBATE (V2 BLINDADO)
--- ============================================================
+
+-- 🤖 SISTEMA DE SUPERVIVENCIA, AUTOMATIZACIÓN
 
 local VirtualUser = game:GetService("VirtualUser")
 local VirtualInputManager = game:GetService("VirtualInputManager")
