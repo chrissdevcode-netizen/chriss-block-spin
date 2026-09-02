@@ -837,7 +837,7 @@ news_stroke.Parent = NewsCard
 local NewsTitle = Instance.new("TextLabel")
 NewsTitle.Size = UDim2.new(1, -20, 0, 18)
 NewsTitle.Position = UDim2.new(0, 12, 0, 8)
-NewsTitle.Text = "NOVEDADES V1.5📢"
+NewsTitle.Text = "NOVEDADES V1.0📢"
 NewsTitle.Font = Enum.Font.GothamBold
 NewsTitle.TextSize = 11
 NewsTitle.TextColor3 = Color3.fromRGB(220, 225, 235)
@@ -848,7 +848,7 @@ NewsTitle.Parent = NewsCard
 local NewsBody = Instance.new("TextLabel")
 NewsBody.Size = UDim2.new(1, -24, 0, 42)
 NewsBody.Position = UDim2.new(0, 12, 0, 28)
-NewsBody.Text = "• MEJORAS 🔥\n•AUTOFAMR AGREGADO \n•SNAP"
+NewsBody.Text = "• PRÓXIMAMENTE SILENT \n•XZ \n•XZ"
 NewsBody.Font = Enum.Font.Gotham
 NewsBody.TextSize = 10
 NewsBody.TextColor3 = Color3.fromRGB(160, 165, 175)
@@ -861,7 +861,7 @@ NewsBody.Parent = NewsCard
 AddToggle(TabCheats, "Speed Hack", "SpeedEnabled", Theme.Main)
 AddSlider(TabCheats, "Speed Power", 16, 300, 16, "SpeedValue", Theme.Main)
 AddToggle(TabCheats, "Infinity Jump", "InfJump", Theme.Main)
-AddToggle(TabCheats, "Hide Name (CS / EXPLOITS)", "HideName", Theme.Main)
+AddToggle(TabCheats, "Hide Name", "HideName", Theme.Main)
 AddToggle(TabCheats, "Spin Bot ", "SpinBot", Theme.Main)
 AddSlider(TabCheats, "Spin Speed", 10, 150, 30, "SpinSpeed", Theme.Main)
 --  BOTONES DE  AUTOMATIZACIÓN
@@ -875,7 +875,7 @@ AddToggle(TabCombat, "Aimbot", "AimbotEnabled", Theme.Combat)
 AddSlider(TabCombat, "FOV Radio", 30, 300, 100, "FOVRadius", Theme.Combat)
 AddToggle(TabCombat, "Show FOV Anillo", "FOVEnabled", Theme.Combat)
 AddToggle(TabCombat, "Silent Aim", "SilentAim", Theme.Combat)
-AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) -- 🔫 BOTÓN NUEVO
+AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) 
 
 -- LOGICA WALL CHECK
 local function VerificarParedVisibilidad(objetivoParte)
