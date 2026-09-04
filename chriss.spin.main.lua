@@ -877,7 +877,10 @@ AddToggle(TabCombat, "Show FOV Anillo", "FOVEnabled", Theme.Combat)
 AddToggle(TabCombat, "Silent Aim", "SilentAim", Theme.Combat)
 AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) 
 
--- LOGICA WALL CHECK
+
+--  LÓGICA DE COMBATE: AIMBOT, FOV Y SILENT AIM 
+
+-- LOGICA WALL CHECK 
 local function VerificarParedVisibilidad(objetivoParte)
     if not Config.WallCheck then return true end 
     
@@ -892,7 +895,7 @@ local function VerificarParedVisibilidad(objetivoParte)
     return resultado == nil 
 end
 
--- LOGICA AIMBOT 
+-- 2. BÚSQUEDA DE OBJETIVO (Apunta solo al Torso/Pecho)
 local function ObtenerEnemigoMasCercano()
     local objetivoCercano = nil
     local distanciaMinima = Config.FOVRadius
@@ -901,7 +904,8 @@ local function ObtenerEnemigoMasCercano()
     for _, jugador in ipairs(Players:GetPlayers()) do
         if jugador ~= LocalPlayer and jugador.Character and jugador.Character:FindFirstChild("Humanoid") and jugador.Character.Humanoid.Health > 0 then
             
-            local parteObjetivo = jugador.Character:FindFirstChild(Config.TargetPart) or jugador.Character:FindFirstChild("Head")
+            -- 🔥 OBJETIVO AL PECHO (UpperTorso o Torso)
+            local parteObjetivo = jugador.Character:FindFirstChild("UpperTorso") or jugador.Character:FindFirstChild("Torso")
             
             if parteObjetivo then
                 local vector2, enPantalla = Camera:WorldToViewportPoint(parteObjetivo.Position)
@@ -912,23 +916,24 @@ local function ObtenerEnemigoMasCercano()
                     if distancia < distanciaMinima and VerificarParedVisibilidad(parteObjetivo) then
                         distanciaMinima = distancia
                         objetivoCercano = parteObjetivo
+                        Config.CurrentTarget = jugador -- Guardamos el jugador en Config
                     end
                 end
             end
         end
     end
     
+    if not objetivoCercano then Config.CurrentTarget = nil end
     return objetivoCercano
 end
 
--- LOGICA FOV & AIMBOT MAIN
+-- 3. LOGICA FOV & AIMBOT MAIN 
 RunService.RenderStepped:Connect(function()
     if not Camera or not workspace.CurrentCamera then
         Camera = workspace.CurrentCamera
         return
     end
     
-    --NEW FOV🔥
     if Config.FOVEnabled then
         fovFrame.Visible = true
         fovFrame.Size = UDim2.fromOffset(Config.FOVRadius * 2, Config.FOVRadius * 2)
@@ -936,11 +941,11 @@ RunService.RenderStepped:Connect(function()
         fovFrame.Visible = false
     end
     
-    if Config.AimbotEnabled or Config.FOVEnabled then
+    if Config.AimbotEnabled or Config.FOVEnabled or Config.SilentAim then
         local objetivo = ObtenerEnemigoMasCercano()
         
         if objetivo then
-            fovStroke.Color = Color3.fromRGB(0, 255, 0) -- VERDE CUANDO DETECTA A ALGUIEN
+            fovStroke.Color = Color3.fromRGB(0, 255, 0) -- VERDE
             
             if Config.AimbotEnabled then
                 local currentPos = Camera.CFrame.Position
@@ -948,10 +953,58 @@ RunService.RenderStepped:Connect(function()
                 Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1.0)
             end
         else
-            fovStroke.Color = Color3.fromRGB(255, 0, 0) -- ROJO CUANDO NO HAY NADIE CERCA
+            fovStroke.Color = Color3.fromRGB(255, 0, 0) -- ROJO
         end
     end
 end)
+
+-- 4. LÓGICA PURA SILENT AIM (REDIRECCIÓN DE BALA AL PECHO)
+local function ObtenerPing()
+    local stats = LocalPlayer:FindFirstChild("PlayerGui")
+    if stats and stats:FindFirstChild("NetworkStats") and stats.NetworkStats:FindFirstChild("PingLabel") then
+        local p = tonumber(stats.NetworkStats.PingLabel.Text:match("%d+"))
+        if p then return math.clamp(p / 1000, 0, 2) end
+    end
+    return 0.2
+end
+
+local function Predecir(parte, enemigo)
+    if not parte then return Vector3.zero end
+    local vel = enemigo.Character:FindFirstChild("HumanoidRootPart") and enemigo.Character.HumanoidRootPart.Velocity or Vector3.zero
+    return parte.Position + (vel * ObtenerPing() * 1.2)
+end
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
+local RemoteSend = Remotes and Remotes:WaitForChild("Send", 5)
+local HookOriginal
+
+if RemoteSend and RemoteSend.FireServer then
+    HookOriginal = hookfunction(RemoteSend.FireServer, function(self, ...)
+        if self ~= RemoteSend then return HookOriginal(self, ...) end
+        local args = {...}
+        
+        -- Si Silent Aim está activo desde tu menú
+        if Config.SilentAim and args[2] == "shoot_gun" and Config.CurrentTarget then
+            local enemigo = Config.CurrentTarget
+            -- 🔥 Forzamos buscar el pecho para disparar
+            local pecho = enemigo.Character and (enemigo.Character:FindFirstChild("UpperTorso") or enemigo.Character:FindFirstChild("Torso"))
+            
+            -- Verificación doble de pared antes de mandar el disparo
+            if pecho and VerificarParedVisibilidad(pecho) then 
+                local posCalc = Predecir(pecho, enemigo)
+                local miCabeza = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+                local miPos = miCabeza and miCabeza.Position or Vector3.zero
+                
+                args[4] = CFrame.new(miPos, posCalc)
+                args[5] = {{{Instance = pecho, Normal = Vector3.new(0, 1, 0), Position = posCalc}}}
+            end
+        end
+        
+        return HookOriginal(self, unpack(args))
+    end)
+end
+
+                
 
 
 -- VISUALS Y MISC TABS
