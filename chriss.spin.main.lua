@@ -927,7 +927,7 @@ local function ObtenerEnemigoMasCercano()
     return objetivoCercano
 end
 
--- 3. LOGICA FOV & AIMBOT MAIN 
+-- 3 LOGICA FOV & AIMBOT MAIN 
 RunService.RenderStepped:Connect(function()
     if not Camera or not workspace.CurrentCamera then
         Camera = workspace.CurrentCamera
@@ -958,50 +958,139 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 4. LÓGICA PURA SILENT AIM (REDIRECCIÓN DE BALA AL PECHO)
-local function ObtenerPing()
-    local stats = LocalPlayer:FindFirstChild("PlayerGui")
-    if stats and stats:FindFirstChild("NetworkStats") and stats.NetworkStats:FindFirstChild("PingLabel") then
-        local p = tonumber(stats.NetworkStats.PingLabel.Text:match("%d+"))
-        if p then return math.clamp(p / 1000, 0, 2) end
-    end
-    return 0.2
-end
-
-local function Predecir(parte, enemigo)
-    if not parte then return Vector3.zero end
-    local vel = enemigo.Character:FindFirstChild("HumanoidRootPart") and enemigo.Character.HumanoidRootPart.Velocity or Vector3.zero
-    return parte.Position + (vel * ObtenerPing() * 1.2)
-end
-
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
-local RemoteSend = Remotes and Remotes:WaitForChild("Send", 5)
-local HookOriginal
-
-if RemoteSend and RemoteSend.FireServer then
-    HookOriginal = hookfunction(RemoteSend.FireServer, function(self, ...)
-        if self ~= RemoteSend then return HookOriginal(self, ...) end
-        local args = {...}
-        
-        -- Si Silent Aim está activo desde tu menú
-        if Config.SilentAim and args[2] == "shoot_gun" and Config.CurrentTarget then
-            local enemigo = Config.CurrentTarget
-            -- 🔥 Forzamos buscar el pecho para disparar
-            local pecho = enemigo.Character and (enemigo.Character:FindFirstChild("UpperTorso") or enemigo.Character:FindFirstChild("Torso"))
-            
-            -- Verificación doble de pared antes de mandar el disparo
-            if pecho and VerificarParedVisibilidad(pecho) then 
-                local posCalc = Predecir(pecho, enemigo)
-                local miCabeza = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
-                local miPos = miCabeza and miCabeza.Position or Vector3.zero
-                
-                args[4] = CFrame.new(miPos, posCalc)
-                args[5] = {{{Instance = pecho, Normal = Vector3.new(0, 1, 0), Position = posCalc}}}
+-- =============================================
+-- ✅ SILENT AIM HOOK (corrección: no detecta paredes)
+-- =============================================
+local aM
+if E and E.FireServer then
+    local aN = pcall(function()
+        aM = hookfunction(E.FireServer, function(aN, ...)
+            if aN ~= E then
+                return aM(aN, ...)
             end
-        end
-        
-        return HookOriginal(self, unpack(args))
+            
+            local aO = {...}
+            
+            if F and aO[2] == "shoot_gun" and I then
+                local aP = I.Character and I.Character:FindFirstChild("Head")
+                local aQ = I.Character and I.Character:FindFirstChild("HumanoidRootPart")
+                local aR = I.Character and I.Character:FindFirstChild("Humanoid")
+                
+                if aP and aQ and aR then
+                    local aS = predictPosition(aP, aQ)
+                    local aP = I.Character and I.Character:FindFirstChild("UpperTorso") or I.Character:FindFirstChild("Torso")
+                    local aU = aT and aT.Position or nil
+                    
+                    if isShotgun() then
+                        aO[4] = CFrame.new(aU, aS)
+                        local aV = {}
+                        for aW = 1, 6 do
+                            local aX = Vector3.new(
+                                math.random(-2, 2) * 0.03,
+                                math.random(-2, 2) * 0.03,
+                                math.random(-2, 2) * 0.03
+                            )
+                            table.insert(aV, {
+                                [1] = {
+                                    Instance = aP,
+                                    Normal = Vector3.new(0, 1, 0),
+                                    Position = aS + aX
+                                }
+                            })
+                        end
+                        aO[5] = aV
+                    else
+                        -- ✅ Corrección: Comprobaciones de pared desactivadas; los disparos siempre atraviesan.­
+                        aO[4] = CFrame.new(aU, aS)
+                        aO[5] = {
+                            [1] = {
+                                [1] = {
+                                    Instance = aP,
+                                    Normal = Vector3.new(0, 1, 0),
+                                    Position = aS
+                                }
+                            }
+                        }
+                    end
+                    
+                    local aV, aW = pcall(function()
+                        local aV = Instance.new("Part")
+                        aV.Anchored = true
+                        aV.CanCollide = false
+                        aV.Size = Vector3.new(0.08, 0.08, (aS - r.Character.Head.Position).Magnitude)
+                        aV.CFrame = CFrame.new(r.Character.Head.Position, aS) * CFrame.new(0, 0, -aV.Size.Z / 2)
+                        aV.Material = Enum.Material.Neon
+                        aV.Transparency = 0.35
+                        aV.Color = Color3.fromRGB(255, 0, 0)
+                        aV.Parent = workspace
+                        f:AddItem(aV, 4)
+                        return aV
+                    end)
+                    
+                    if aR then
+                        local aX = aR.Health
+                        spawn(function()
+                            wait(0.1)
+                            if aR and aR.Health < aX then
+                                if aV and aW then
+                                    aW.Color = Color3.fromRGB(0, 255, 0)
+                                end
+                                
+                                for aY, aZ in ipairs(I.Character:GetDescendants()) do
+                                    if aZ:IsA("BasePart") then
+                                        local a_ = Instance.new("Part")
+                                        a_.Size = aZ.Size + Vector3.new(0.05, 0.05, 0.05)
+                                        a_.CFrame = aZ.CFrame
+                                        a_.Anchored = true
+                                        a_.CanCollide = false
+                                        a_.Material = Enum.Material.Neon
+                                        a_.Color = Color3.fromRGB(255, 0, 0)
+                                        a_.Transparency = 0.5
+                                        a_.Parent = g
+                                        
+                                        local a0 = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
+                                        e:Create(a_, a0, {Transparency = 1}):Play()
+                                        f:AddItem(a_, 2)
+                                    end
+                                end
+                                
+                                if aP then
+                                    local aY = Instance.new("Part")
+                                    aY.Size = Vector3.new(0.2, 0.2, 0.2)
+                                    aY.Shape = Enum.PartType.Ball
+                                    aY.Material = Enum.Material.Neon
+                                    aY.Color = Color3.fromRGB(255, 0, 0)
+                                    aY.CFrame = CFrame.new(aP.Position)
+                                    aY.Anchored = false
+                                    aY.CanCollide = false
+                                    aY.Parent = g
+                                    
+                                    local aZ = Instance.new("BodyVelocity")
+                                    aZ.Velocity = Vector3.new(
+                                        math.random(-5, 5),
+                                        math.random(5, 10),
+                                        math.random(-5, 5)
+                                    )
+                                    aZ.P = 5000
+                                    aZ.MaxForce = Vector3.new(4000, 4000, 4000)
+                                    aZ.Parent = aY
+                                    f:AddItem(aY, 1)
+                                end
+                            else
+                                if aV and aW then
+                                    aW.Color = Color3.fromRGB(255, 0, 0)
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+            
+            return aM(aN, unpack(aO))
+        end)
     end)
+    
+    if not aN then end
 end
 
                 
@@ -1141,7 +1230,7 @@ local function getWeaponInfo(tool)
     return WeaponRegistry[getItemKey(tool)]
 end
 
--- 2. CREADOR DE INVENTARIO BILLBOARD (DINÁMICO)
+--  CREADOR DE INVENTARIO BILLBOARD 
 local function updateInventoryBillboard(player)
     if player == LocalPlayer then return end
     local char = player.Character
