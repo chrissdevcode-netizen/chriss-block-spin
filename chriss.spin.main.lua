@@ -958,9 +958,27 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- =============================================
+
 -- ✅ SILENT AIM HOOK (corrección: no detecta paredes)
--- =============================================
+
+-- Variables principales de referencia
+local a = game:GetService("Players")
+local b = game:GetService("RunService")
+local c = game:GetService("ReplicatedStorage")
+local d = game:GetService("UserInputService")
+local e = game:GetService("TweenService")
+local f = game:GetService("Debris")
+local g = game:GetService("Workspace")
+local h = game:GetService("ContextActionService")
+
+local i = c:WaitForChild("Remotes")
+local r = a.LocalPlayer
+
+local E = c:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
+local F = false
+local I = nil
+
+
 local aM
 if E and E.FireServer then
     local aN = pcall(function()
