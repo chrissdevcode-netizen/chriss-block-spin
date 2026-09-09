@@ -865,9 +865,9 @@ AddToggle(TabCheats, "Hide Name", "HideName", Theme.Main)
 AddToggle(TabCheats, "Spin Bot ", "SpinBot", Theme.Main)
 AddSlider(TabCheats, "Spin Speed", 10, 150, 30, "SpinSpeed", Theme.Main)
 --  BOTONES DE  AUTOMATIZACIÓN
-AddToggle(TabCheats, "Auto Blood Bag (<70 HP)", "AutoBlood", Theme.Main)
-AddToggle(TabCheats, "Auto Skip Crate / Ammo", "AutoSkipCrate", Theme.Main)
-AddToggle(TabCheats, "Auto Minigame (ATM/Fish)", "AutoMinigame", Theme.Main)
+AddToggle(TabCheats, "Auto Blood Bag", "AutoBlood", Theme.Main)
+AddToggle(TabCheats, "Auto Skip Crate ", "AutoSkipCrate", Theme.Main)
+AddToggle(TabCheats, "Auto Minigame", "AutoMinigame", Theme.Main)
 AddToggle(TabCheats, "Auto Pickup Items", "AutoPickup", Theme.Main)
 
 -- COMBAT
@@ -1710,7 +1710,7 @@ task.spawn(function()
         if Config.AutoBlood and Character then
             local hum = Character:FindFirstChildOfClass("Humanoid")
             local backpack = LocalPlayer:FindFirstChild("Backpack")
-            if hum and hum.Health > 0 and hum.Health < 70 and backpack then
+            if hum and hum.Health > 0 and hum.Health < 50 and backpack then
                 local bloodBag = backpack:FindFirstChild("Blood Bag") or Character:FindFirstChild("Blood Bag")
                 if bloodBag then
                     if bloodBag.Parent == backpack then hum:EquipTool(bloodBag) end
@@ -1816,47 +1816,3 @@ task.spawn(function()
     end
 end)
 
--- Botón Flotante Magnético para Auto Pickup
-local AutoPickupGui = Instance.new("ScreenGui")
-AutoPickupGui.Name = "AP_Toggle"
-AutoPickupGui.ResetOnSpawn = false
-pcall(function() AutoPickupGui.Parent = game:GetService("CoreGui") end)
-if not AutoPickupGui.Parent then AutoPickupGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local APBtn = Instance.new("ImageButton", AutoPickupGui)
-APBtn.Size = UDim2.new(0, 48, 0, 48)
-APBtn.Position = UDim2.new(0, 20, 0.5, 45)
-APBtn.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
-APBtn.Active = true; APBtn.Draggable = true
-
-local APIcon = Instance.new("ImageLabel", APBtn)
-APIcon.Size = UDim2.new(0, 24, 0, 24)
-APIcon.Position = UDim2.new(0.5, -12, 0.5, -12)
-APIcon.BackgroundTransparency = 1
-APIcon.Image = "rbxassetid://6031094678"
-APIcon.ImageColor3 = Color3.fromRGB(255, 80, 80)
-
-Instance.new("UICorner", APBtn).CornerRadius = UDim.new(0, 12)
-local APStroke = Instance.new("UIStroke", APBtn)
-APStroke.Color = Color3.fromRGB(255, 80, 80); APStroke.Thickness = 1.5
-
-local function updateAutoPickupUI()
-    if Config.AutoPickup then
-        APIcon.ImageColor3 = Color3.fromRGB(80, 255, 120)
-        APStroke.Color = Color3.fromRGB(80, 255, 120)
-    else
-        APIcon.ImageColor3 = Color3.fromRGB(255, 80, 80)
-        APStroke.Color = Color3.fromRGB(255, 80, 80)
-    end
-end
-
--- Sincronizar el botón si lo activas desde el menú principal
-RunService.Heartbeat:Connect(function()
-    if APIcon.ImageColor3 == Color3.fromRGB(80, 255, 120) and not Config.AutoPickup then updateAutoPickupUI() end
-    if APIcon.ImageColor3 == Color3.fromRGB(255, 80, 80) and Config.AutoPickup then updateAutoPickupUI() end
-end)
-
-APBtn.MouseButton1Click:Connect(function()
-    Config.AutoPickup = not Config.AutoPickup
-    updateAutoPickupUI()
-end)
