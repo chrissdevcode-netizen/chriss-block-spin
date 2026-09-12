@@ -1424,12 +1424,18 @@ RunService.RenderStepped:Connect(function()
 
             cache.Highlight.Adornee = character
             cache.Highlight.Enabled = Config.ESPBox
+
+
+           -- ESP BOX
             
             if Config.ESPBox then
                 cache.Box.Size = UDim2.new(0, boxWidth, 0, boxHeight)
                 cache.Box.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, topPos.Y)
                 cache.Box.Visible = true
             else cache.Box.Visible = false end
+
+
+               --ESP NAME
 
             if Config.ESPName then
                 cache.NameText.Text = player.Name
@@ -1438,6 +1444,9 @@ RunService.RenderStepped:Connect(function()
                 cache.NameText.Visible = true
             else cache.NameText.Visible = false end
 
+
+             -- ESP DISTANCIA 
+
             local yOffset = bottomPos.Y + 4
             if Config.ESPDist then
                 cache.DistText.Text = string.format("[%d m]", math.floor(distance))
@@ -1445,6 +1454,10 @@ RunService.RenderStepped:Connect(function()
                 cache.DistText.Position = UDim2.new(0, rootPos.X - (boxWidth / 2), 0, yOffset)
                 cache.DistText.Visible = true
             else cache.DistText.Visible = false end
+
+
+
+           --  ESP HELTH
 
             if Config.ESPHealth then
                 local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
@@ -1455,6 +1468,11 @@ RunService.RenderStepped:Connect(function()
                 cache.HealthFill.BackgroundColor3 = Color3.fromHSV((hpPercent * 120) / 360, 1, 1)
                 cache.HealthBg.Visible = true; cache.HealthFill.Visible = true
             else cache.HealthBg.Visible = false end
+
+
+
+      --LÓGICA TRACES 
+
 
             if Config.Traces then
                 local targetPos = Vector2.new(rootPos.X, bottomPos.Y)
