@@ -65,7 +65,7 @@ local Config = {
     
     -- Combat
     AimbotEnabled = false,
-    SilentAim = false,
+    silentAimEnabled = false,
     FOVEnabled = false, 
     FOVRadius = 100,
     WallCheck = true,
@@ -874,8 +874,7 @@ AddToggle(TabCheats, "Auto Pickup Items", "AutoPickup", Theme.Main)
 AddToggle(TabCombat, "Aimbot", "AimbotEnabled", Theme.Combat)
 AddSlider(TabCombat, "FOV Radio", 30, 300, 100, "FOVRadius", Theme.Combat)
 AddToggle(TabCombat, "Show FOV Anillo", "FOVEnabled", Theme.Combat)
-AddToggle(TabCombat, "Silent Aim", "SilentAim", Theme.Combat)
-AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) 
+AddToggle(TabCombat, "Silent Aim", "silentAimEnabled", Theme.Combat)AddToggle(TabCombat, "No Recoil", "NoRecoil", Theme.Combat) 
 
 
 --  LÓGICA DE COMBATE: AIMBOT, FOV Y SILENT AIM 
@@ -959,157 +958,192 @@ RunService.RenderStepped:Connect(function()
 end)
 
 
--- ✅ SILENT AIM HOOK (corrección: no detecta paredes)
-
--- Variables principales de referencia
-local a = game:GetService("Players")
-local b = game:GetService("RunService")
-local c = game:GetService("ReplicatedStorage")
-local d = game:GetService("UserInputService")
-local e = game:GetService("TweenService")
-local f = game:GetService("Debris")
-local g = game:GetService("Workspace")
-local h = game:GetService("ContextActionService")
-
-local i = c:WaitForChild("Remotes")
-local r = a.LocalPlayer
-
-local E = c:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
-local F = false
-local I = nil
 
 
-local aM
-if E and E.FireServer then
-    local aN = pcall(function()
-        aM = hookfunction(E.FireServer, function(aN, ...)
-            if aN ~= E then
-                return aM(aN, ...)
+
+-- SILENT AIMBOT SISTEMA INSANO 
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local aimTarget = nil
+local positionHistory = {}
+local HISTORY_SIZE = 10
+local MAX_JUMP_VEL = 150
+local _hookBusy = false
+
+
+
+local SendRemote
+pcall(function()
+    SendRemote = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
+end)
+
+local function getPing()
+    local gui   = LocalPlayer:FindFirstChild("PlayerGui")
+    local stats = gui and gui:FindFirstChild("NetworkStats")
+    local label = stats and stats:FindFirstChild("PingLabel")
+    if not label then return 0.2 end
+    local num = tonumber(tostring(label.Text):match("%d+"))
+    if not num then return 0.2 end
+    local ping = num / 1000
+    return (ping < 0 or ping > 2) and 0.2 or ping
+end
+
+RunService.Heartbeat:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            local hum  = player.Character:FindFirstChild("Humanoid")
+            if root and hum and hum.Health > 0 then
+                positionHistory[player] = positionHistory[player] or {}
+                table.insert(positionHistory[player], { time = os.clock(), pos = root.Position })
+                if #positionHistory[player] > HISTORY_SIZE then
+                    table.remove(positionHistory[player], 1)
+                end
+            else
+                positionHistory[player] = nil
             end
-            
-            local aO = {...}
-            
-            if F and aO[2] == "shoot_gun" and I then
-                local aP = I.Character and I.Character:FindFirstChild("Head")
-                local aQ = I.Character and I.Character:FindFirstChild("HumanoidRootPart")
-                local aR = I.Character and I.Character:FindFirstChild("Humanoid")
-                
-                if aP and aQ and aR then
-                    local aS = predictPosition(aP, aQ)
-                    local aP = I.Character and I.Character:FindFirstChild("UpperTorso") or I.Character:FindFirstChild("Torso")
-                    local aU = aT and aT.Position or nil
-                    
-                    if isShotgun() then
-                        aO[4] = CFrame.new(aU, aS)
-                        local aV = {}
-                        for aW = 1, 6 do
-                            local aX = Vector3.new(
-                                math.random(-2, 2) * 0.03,
-                                math.random(-2, 2) * 0.03,
-                                math.random(-2, 2) * 0.03
-                            )
-                            table.insert(aV, {
-                                [1] = {
-                                    Instance = aP,
-                                    Normal = Vector3.new(0, 1, 0),
-                                    Position = aS + aX
-                                }
-                            })
-                        end
-                        aO[5] = aV
-                    else
-                        -- ✅ Corrección: Comprobaciones de pared desactivadas; los disparos siempre atraviesan.­
-                        aO[4] = CFrame.new(aU, aS)
-                        aO[5] = {
-                            [1] = {
-                                [1] = {
-                                    Instance = aP,
-                                    Normal = Vector3.new(0, 1, 0),
-                                    Position = aS
-                                }
-                            }
-                        }
-                    end
-                    
-                    local aV, aW = pcall(function()
-                        local aV = Instance.new("Part")
-                        aV.Anchored = true
-                        aV.CanCollide = false
-                        aV.Size = Vector3.new(0.08, 0.08, (aS - r.Character.Head.Position).Magnitude)
-                        aV.CFrame = CFrame.new(r.Character.Head.Position, aS) * CFrame.new(0, 0, -aV.Size.Z / 2)
-                        aV.Material = Enum.Material.Neon
-                        aV.Transparency = 0.35
-                        aV.Color = Color3.fromRGB(255, 0, 0)
-                        aV.Parent = workspace
-                        f:AddItem(aV, 4)
-                        return aV
-                    end)
-                    
-                    if aR then
-                        local aX = aR.Health
-                        spawn(function()
-                            wait(0.1)
-                            if aR and aR.Health < aX then
-                                if aV and aW then
-                                    aW.Color = Color3.fromRGB(0, 255, 0)
-                                end
-                                
-                                for aY, aZ in ipairs(I.Character:GetDescendants()) do
-                                    if aZ:IsA("BasePart") then
-                                        local a_ = Instance.new("Part")
-                                        a_.Size = aZ.Size + Vector3.new(0.05, 0.05, 0.05)
-                                        a_.CFrame = aZ.CFrame
-                                        a_.Anchored = true
-                                        a_.CanCollide = false
-                                        a_.Material = Enum.Material.Neon
-                                        a_.Color = Color3.fromRGB(255, 0, 0)
-                                        a_.Transparency = 0.5
-                                        a_.Parent = g
-                                        
-                                        local a0 = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
-                                        e:Create(a_, a0, {Transparency = 1}):Play()
-                                        f:AddItem(a_, 2)
-                                    end
-                                end
-                                
-                                if aP then
-                                    local aY = Instance.new("Part")
-                                    aY.Size = Vector3.new(0.2, 0.2, 0.2)
-                                    aY.Shape = Enum.PartType.Ball
-                                    aY.Material = Enum.Material.Neon
-                                    aY.Color = Color3.fromRGB(255, 0, 0)
-                                    aY.CFrame = CFrame.new(aP.Position)
-                                    aY.Anchored = false
-                                    aY.CanCollide = false
-                                    aY.Parent = g
-                                    
-                                    local aZ = Instance.new("BodyVelocity")
-                                    aZ.Velocity = Vector3.new(
-                                        math.random(-5, 5),
-                                        math.random(5, 10),
-                                        math.random(-5, 5)
-                                    )
-                                    aZ.P = 5000
-                                    aZ.MaxForce = Vector3.new(4000, 4000, 4000)
-                                    aZ.Parent = aY
-                                    f:AddItem(aY, 1)
-                                end
-                            else
-                                if aV and aW then
-                                    aW.Color = Color3.fromRGB(255, 0, 0)
-                                end
-                            end
-                        end)
+        end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p) positionHistory[p] = nil end)
+
+local function calcVelocity(player)
+    local h = positionHistory[player]
+    if not h or #h < 2 then return Vector3.new() end
+    local sum, tw = Vector3.new(), 0
+    for i = 2, #h do
+        local dt = h[i].time - h[i-1].time
+        if dt > 0 then
+            local raw = (h[i].pos - h[i-1].pos) / dt
+            local c = Vector3.new(math.clamp(raw.X,-120,120), math.clamp(raw.Y,-150,150), math.clamp(raw.Z,-120,120))
+            sum = sum + c * i; tw = tw + i
+        end
+    end
+    if tw == 0 then return Vector3.new() end
+    local avg = sum / tw
+    if avg.Y > MAX_JUMP_VEL then return Vector3.new(avg.X*1.15, math.clamp(avg.Y*0.85,0,400), avg.Z*1.15) end
+    return avg
+end
+
+local function predictPos(part)
+    if not part then return Vector3.zero end
+    local player   = Players:GetPlayerFromCharacter(part.Parent)
+    local velocity = (player and calcVelocity(player)) or Vector3.zero
+    local ping     = math.clamp(getPing(), 0.06, 0.35)
+    local hSpeed   = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+    local mult = hSpeed>60 and 1.50 or hSpeed>50 and 1.42 or hSpeed>35 and 1.32 or hSpeed>20 and 1.22 or hSpeed>10 and 1.15 or 1.05
+    if ping > 0.15 then mult = mult * 0.93 end
+    local hor  = Vector3.new(velocity.X,0,velocity.Z) * ping * mult
+    local vert = Vector3.new(0, math.clamp(velocity.Y*ping*0.30,-4,4), 0)
+    local jb   = Vector3.new(0, velocity.Y>20 and 0.50 or velocity.Y>15 and 0.35 or 0, 0)
+    local ho   = part.Name=="HumanoidRootPart" and Vector3.new(0, hSpeed>30 and 0.14 or hSpeed>22 and 0.10 or 0.05, 0) or Vector3.zero
+    return part.Position + hor + vert + jb + ho
+end
+
+local function isBehindWall(origin, target)
+    if not origin or not target then return false end
+    local dir = target - origin
+    if dir.Magnitude < 1 then return false end
+    local result = workspace:Raycast(origin, dir, RaycastParams.new())
+    if not result then return false end
+    local inst = result.Instance
+    local mc = LocalPlayer.Character
+    local ac = aimTarget and aimTarget.Character
+    return inst and not ((mc and inst:IsDescendantOf(mc)) or (ac and inst:IsDescendantOf(ac)))
+end
+
+local function getClosestSA()
+    local best, bestDist = nil, fovRadius
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local hum  = player.Character:FindFirstChild("Humanoid")
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if head and hum and hum.Health > 0 and root then
+                local pos, visible = Camera:WorldToViewportPoint(head.Position)
+                if visible then
+                    local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if dist <= fovRadius and dist < bestDist then
+                        bestDist = dist; best = player
                     end
                 end
             end
-            
-            return aM(aN, unpack(aO))
-        end)
-    end)
-    
-    if not aN then end
+        end
+    end
+    return best
 end
+
+
+-- Hook
+local originalFireServer
+task.spawn(function()
+    if SendRemote and SendRemote.FireServer then
+        pcall(function()
+            originalFireServer = hookfunction(SendRemote.FireServer, function(self, ...)
+                if self ~= SendRemote or _hookBusy then return originalFireServer(self, ...) end
+                _hookBusy = true
+                local args = { ... }
+                if silentAimEnabled and args[2] == "shoot_gun" and aimTarget then
+                    local root = aimTarget.Character and aimTarget.Character:FindFirstChild("HumanoidRootPart")
+local hum  = aimTarget.Character and aimTarget.Character:FindFirstChild("Humanoid")
+if root and hum then
+    local aimPos = predictPos(root)                        local myHead    = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+                        local originPos = myHead and myHead.Position or nil
+                        local function isShotgun()
+                            local char = LocalPlayer.Character
+                            if not char then return false end
+                            for _, tool in ipairs(char:GetChildren()) do
+                                if tool:IsA("Tool") then
+                                    local ammo = tool:GetAttribute("AmmoType")
+                                    if ammo == "shotgun" or ammo == "shootgun" then return true end
+                                end
+                            end
+                            return false
+                        end
+                        if isShotgun() then
+                            args[4] = CFrame.new(originPos, aimPos)
+                            local pellets = {}
+                            for i = 1, 6 do
+                                local sp = Vector3.new(math.random(-2,2)*0.03, math.random(-2,2)*0.03, math.random(-2,2)*0.03)
+                                table.insert(pellets, { [1] = { Instance=root, Normal=Vector3.new(0,1,0), Position=aimPos+sp }})
+                            end
+                            args[5] = pellets
+                        else
+                            local wb = isBehindWall(originPos, aimPos)
+                            args[4] = wb and CFrame.new(math.huge,math.huge,math.huge) or CFrame.new(originPos, aimPos)
+                            args[5] = { [1] = { [1] = { Instance=root, Normal=Vector3.new(0,1,0), Position=aimPos }}}
+                        end
+                    end
+                end
+                local res = originalFireServer(self, table.unpack(args))
+                _hookBusy = false
+                return res
+            end)
+        end)
+    end
+end)
+
+-- Actualizar objetivo del Silent Aim
+RunService.RenderStepped:Connect(function()
+    if silentAimEnabled then
+        aimTarget = Config.CurrentTarget
+    else
+        aimTarget = nil
+    end
+end)
+
+
+
+
+
+
 
                 
 
